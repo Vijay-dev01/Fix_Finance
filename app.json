@@ -1,11 +1,13 @@
 {
   "expo": {
-    "name": "Monthly Budget Planner",
-    "slug": "monthly-budget-planner",
+    "name": "VStack",
+    "slug": "vstack",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
+      "image": "./assets/icon.png",
       "backgroundColor": "#000000",
       "resizeMode": "contain"
     },
@@ -13,17 +15,22 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vstack"
     },
     "android": {
-      "package": "com.monthlybudgetplanner",
+      "package": "com.vstack",
       "versionCode": 1,
       "permissions": [],
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      }
     },
     "extra": {
       "eas": {
-        "projectId": "b223d7d3-084c-4a1c-9952-1d344df6ab5d"
+        "projectId": "a8db8fcc-8924-4aa3-bb7b-b2f0d487d8ff"
       }
     }
   }
