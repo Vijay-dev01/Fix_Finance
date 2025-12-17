@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card, Text } from 'react-native-paper';
-import { theme } from '../theme';
+import { theme, colors } from '../theme';
 import { formatCurrency } from '../constants/categories';
 
 interface StatCardProps {
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   value: {

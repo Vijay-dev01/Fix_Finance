@@ -4,12 +4,10 @@
     "slug": "monthly-budget-planner",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "resizeMode": "contain"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -18,15 +16,15 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
-      },
-      "package": "com.monthlybudgetplanner"
+      "package": "com.monthlybudgetplanner",
+      "versionCode": 1,
+      "permissions": [],
+      "backgroundColor": "#000000"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "extra": {
+      "eas": {
+        "projectId": "b223d7d3-084c-4a1c-9952-1d344df6ab5d"
+      }
     }
   }
 }
-
