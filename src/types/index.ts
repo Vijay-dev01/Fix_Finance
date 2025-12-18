@@ -31,6 +31,7 @@ export interface BudgetState {
 
 export type BudgetAction =
   | { type: 'SET_BUDGET'; categoryId: string; amount: number }
+  | { type: 'SET_SPENT'; categoryId: string; amount: number }
   | { type: 'ADD_TRANSACTION'; transaction: Transaction }
   | { type: 'DELETE_TRANSACTION'; transactionId: string; categoryId: string }
   | { type: 'RESET_MONTHLY_BUDGET' }

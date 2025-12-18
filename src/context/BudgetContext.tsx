@@ -9,6 +9,7 @@ interface BudgetContextType {
   state: BudgetState;
   dispatch: React.Dispatch<BudgetAction>;
   setBudget: (categoryId: string, amount: number) => void;
+  setSpent: (categoryId: string, amount: number) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void;
   deleteTransaction: (transactionId: string, categoryId: string) => void;
   resetMonthlyBudget: () => void;
@@ -122,6 +123,10 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     dispatch({ type: 'SET_BUDGET', categoryId, amount });
   };
 
+  const setSpent = (categoryId: string, amount: number) => {
+    dispatch({ type: 'SET_SPENT', categoryId, amount });
+  };
+
   const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'>) => {
     const newTransaction: Transaction = {
       ...transaction,
@@ -158,6 +163,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         state,
         dispatch,
         setBudget,
+        setSpent,
         addTransaction,
         deleteTransaction,
         resetMonthlyBudget,

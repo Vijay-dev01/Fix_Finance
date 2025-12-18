@@ -47,6 +47,20 @@ export const budgetReducer = (
       };
     }
 
+    case 'SET_SPENT': {
+      const updatedCategories = state.categories.map(cat =>
+        cat.id === action.categoryId
+          ? { ...cat, spent: Math.max(0, action.amount) }
+          : cat
+      );
+      const totals = calculateTotals(updatedCategories, state.totalIncome);
+      return {
+        ...state,
+        categories: updatedCategories,
+        ...totals,
+      };
+    }
+
     case 'ADD_TRANSACTION': {
       const { transaction } = action;
       let updatedCategories = state.categories;
