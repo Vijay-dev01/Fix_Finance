@@ -58,11 +58,13 @@ const BudgetProgressCard: React.FC<BudgetProgressCardProps> = ({
 
         {category.budget > 0 && (
           <View style={styles.progressContainer}>
+            <View style={styles.progressWrapper}>
             <ProgressBar
               progress={percentage / 100}
               color={isOverBudget ? theme.colors.error : theme.colors.primary}
               style={styles.progressBar}
             />
+            </View>
             <Text style={styles.percentage}>{percentage.toFixed(1)}%</Text>
           </View>
         )}
@@ -124,11 +126,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  progressBar: {
+  progressWrapper: {
     flex: 1,
-    height: 8,
+    overflow: 'hidden', // 🔥 prevents overflow
+  },
+  progressBar: {
+    height: 20,
     borderRadius: 4,
-    marginRight: 8,
   },
   percentage: {
     fontSize: 12,
