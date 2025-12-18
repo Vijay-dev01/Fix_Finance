@@ -23,6 +23,7 @@ A comprehensive React Native app for Android that helps you track and manage you
 
 - ✅ Set monthly budget limits for each category
 - ✅ Track spending in each category with detailed transactions
+- ✅ **Automatic SMS-based expense tracking** - Read SMS and automatically extract expenses/income
 - ✅ Visual progress bars showing spent vs. limit for each category
 - ✅ Remaining balance management
 - ✅ Carry over balance to next month
@@ -218,6 +219,36 @@ For issues and questions:
 2. Create a new issue with detailed description
 3. Include device and OS information
 
+## 📱 SMS Expense Tracking
+
+VStack can automatically read your SMS messages and extract transaction information:
+
+### How It Works
+
+1. **Grant SMS Permission** - The app requests permission to read SMS (Android only)
+2. **Scan Recent SMS** - Reads your recent SMS messages to find transaction SMS
+3. **Smart Parsing** - Automatically extracts:
+   - Amount (₹)
+   - Transaction type (Income/Expense)
+   - Description/Merchant name
+   - Category (based on keywords)
+4. **Review & Add** - Review parsed transactions and add them with one tap
+
+### Supported SMS Formats
+
+- Bank debit/credit messages
+- UPI transaction notifications
+- Payment gateway confirmations
+- Salary/income credits
+- Refund notifications
+
+### Privacy & Security
+
+- SMS data is processed locally on your device
+- No SMS data is sent to external servers
+- You control which transactions to add
+- Permission can be revoked anytime in Android settings
+
 ## 🔮 Future Enhancements
 
 - [ ] Export data to CSV/PDF
@@ -228,6 +259,7 @@ For issues and questions:
 - [ ] Advanced analytics
 - [ ] Recurring transactions
 - [ ] Bill reminders
+- [ ] Real-time SMS monitoring
 
 ---
 

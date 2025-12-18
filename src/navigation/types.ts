@@ -8,6 +8,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Dashboard: undefined;
   Categories: undefined;
+  SMSTracking: undefined;
 };
 
 declare global {

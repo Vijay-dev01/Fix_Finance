@@ -7,6 +7,7 @@ import { RootStackParamList, MainTabParamList } from './types';
 import DashboardScreen from '../screens/DashboardScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
+import SMSTrackingScreen from '../screens/SMSTrackingScreen';
 import { theme } from '../theme';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -48,6 +49,16 @@ const MainTabs = () => {
           title: 'Categories',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="folder-multiple" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="SMSTracking"
+        component={SMSTrackingScreen}
+        options={{
+          title: 'SMS Tracking',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="message-text" size={size} color={color} />
           ),
         }}
       />
