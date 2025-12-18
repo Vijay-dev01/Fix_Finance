@@ -15,6 +15,8 @@ import {
   Divider,
   Chip,
   ActivityIndicator,
+  Dialog,
+  Portal,
 } from 'react-native-paper';
 import { useBudget } from '../context/BudgetContext';
 import { SMSReader } from '../services/smsReader';
@@ -29,6 +31,7 @@ const SMSTrackingScreen: React.FC = () => {
   const [parsedTransactions, setParsedTransactions] = useState<ParsedSMS[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState<number | null>(null);
 
   useEffect(() => {
     checkPermissions();
@@ -89,6 +92,19 @@ const SMSTrackingScreen: React.FC = () => {
     
     // Remove from list
     setParsedTransactions(prev => prev.filter(t => t !== parsed));
+  };
+
+  const handleCategoryChange = (index: number, categoryId: string) => {
+    setParsedTransactions(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], category: categoryId };
+      return updated;
+    });
+    setEditingCategoryIndex(null);
+  };
+
+  const handleCategoryChipPress = (index: number) => {
+    setEditingCategoryIndex(index);
   };
 
   const handleAddAll = () => {
@@ -239,14 +255,19 @@ const SMSTrackingScreen: React.FC = () => {
                         {parsed.type === 'income' ? 'Income' : 'Expense'}
                       </Chip>
                     </View>
-                    {parsed.category && (
-                      <Chip style={styles.categoryChip} compact>
-                        {
-                          state.categories.find(c => c.id === parsed.category)
-                            ?.name || parsed.category
-                        }
-                      </Chip>
-                    )}
+                    <Chip
+                      style={styles.categoryChip}
+                      compact
+                      onPress={() => handleCategoryChipPress(index)}
+                      icon="pencil"
+                    >
+                      {
+                        parsed.category === 'income'
+                          ? 'Income'
+                          : state.categories.find(c => c.id === parsed.category)
+                            ?.name || parsed.category || 'Select Category'
+                      }
+                    </Chip>
                   </View>
 
                   <Text style={styles.transactionDescription}>
@@ -273,6 +294,44 @@ const SMSTrackingScreen: React.FC = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Category Selection Dialog */}
+      <Portal>
+        <Dialog
+          visible={editingCategoryIndex !== null}
+          onDismiss={() => setEditingCategoryIndex(null)}
+          style={styles.dialog}
+        >
+          <Dialog.Title>Select Category</Dialog.Title>
+          <Dialog.Content>
+            <ScrollView style={styles.categoryList}>
+              {parsedTransactions[editingCategoryIndex || 0]?.type === 'expense' ? (
+                // Show all expense categories
+                state.categories.map(category => (
+                  <List.Item
+                    key={category.id}
+                    title={category.name}
+                    left={() => <Text style={styles.categoryIcon}>{category.icon}</Text>}
+                    onPress={() => editingCategoryIndex !== null && handleCategoryChange(editingCategoryIndex, category.id)}
+                    style={styles.categoryItem}
+                  />
+                ))
+              ) : (
+                // For income, show income option
+                <List.Item
+                  title="Income"
+                  left={() => <Text style={styles.categoryIcon}>💵</Text>}
+                  onPress={() => editingCategoryIndex !== null && handleCategoryChange(editingCategoryIndex, 'income')}
+                  style={styles.categoryItem}
+                />
+              )}
+            </ScrollView>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setEditingCategoryIndex(null)}>Cancel</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 };
@@ -410,6 +469,20 @@ const styles = StyleSheet.create({
   addButton: {
     marginTop: 8,
     backgroundColor: theme.colors.primary,
+  },
+  dialog: {
+    backgroundColor: theme.colors.surface,
+    maxHeight: '80%',
+  },
+  categoryList: {
+    maxHeight: 300,
+  },
+  categoryItem: {
+    paddingVertical: 8,
+  },
+  categoryIcon: {
+    fontSize: 24,
+    marginRight: 8,
   },
 });
 
