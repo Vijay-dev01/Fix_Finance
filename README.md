@@ -4,6 +4,12 @@ A comprehensive React Native app for Android that helps you track and manage you
 
 ## 🚀 Features
 
+Fix-Finance App
+ 
+   npm start -- --tunnel
+ 
+   npm start -- --reset-cache
+ 
 ### Budget Categories
 
 - **Gold** - Track gold investments
