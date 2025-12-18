@@ -7,7 +7,7 @@ const calculateTotals = (
 ) => {
   const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
   const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
-  const remainingBalance = totalBudget + totalIncome - totalSpent;
+  const remainingBalance = totalIncome - totalSpent;
   return { totalBudget, totalSpent, remainingBalance };
 };
 
@@ -152,7 +152,6 @@ export const budgetReducer = (
       return {
         ...state,
         categories: updatedCategories,
-        totalSpent: 0,
         incomeTransactions: [],
         totalIncome: 0,
         ...totals,
