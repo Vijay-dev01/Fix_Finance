@@ -65,3 +65,7 @@ If you want to build without custom assets temporarily:
 2. Run `npm run build:android` again
 3. The build should succeed!
 
+
+
+
+

@@ -28,6 +28,7 @@ const CATEGORY_KEYWORDS: { [key: string]: string[] } = {
   'trip': ['flight', 'hotel', 'travel', 'trip', 'booking', 'makemytrip', 'goibibo'],
   'movie': ['movie', 'cinema', 'bookmyshow', 'ticket'],
   'skin-care': ['pharmacy', 'medicine', 'apollo', 'wellness', 'health'],
+  'gym': ['gym', 'fitness', 'workout', 'exercise', 'gymnasium', 'fitness center'],
   'gold': ['gold', 'jewellery', 'jewelry'],
   'stock': ['stock', 'share', 'nse', 'bse', 'investment'],
   'sip': ['sip', 'mutual fund', 'mf', 'investment'],
@@ -198,4 +199,8 @@ export class SMSParser {
     return bankKeywords.some(keyword => normalizedSender.includes(keyword));
   }
 }
+
+
+
+
 

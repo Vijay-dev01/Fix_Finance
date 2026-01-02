@@ -20,3 +20,7 @@ console.log('3. Generate adaptive-icon.png (1024x1024)');
 console.log('4. Generate splash.png (1242x2436)');
 console.log('5. Place them in the assets/ folder');
 
+
+
+
+

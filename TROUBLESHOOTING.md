@@ -68,3 +68,7 @@ npm start
 ## Note
 The app code has been updated to handle these errors gracefully. Even if you see this error, the app should continue working once the connection is established.
 
+
+
+
+

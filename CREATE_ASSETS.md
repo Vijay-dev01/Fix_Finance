@@ -54,3 +54,7 @@ I've updated `app.json` to not require assets for now, but Expo still needs at l
 npm run build:android
 ```
 
+
+
+
+

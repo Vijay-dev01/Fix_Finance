@@ -12,6 +12,7 @@ export const CATEGORY_ICONS: { [key: string]: string } = {
   'Skin Care': '🧴',
   Trip: '✈️',
   Movie: '🎬',
+  GYM: '💪',
   'Unknown Expenses': '❓',
 };
 
@@ -105,6 +106,14 @@ export const INITIAL_CATEGORIES: Category[] = [
     transactions: [],
   },
   {
+    id: 'gym',
+    name: 'GYM',
+    icon: CATEGORY_ICONS.GYM,
+    budget: 0,
+    spent: 0,
+    transactions: [],
+  },
+  {
     id: 'unknown-expenses',
     name: 'Unknown Expenses',
     icon: CATEGORY_ICONS['Unknown Expenses'],
@@ -122,4 +131,8 @@ export const getCurrentMonth = (): string => {
 export const formatCurrency = (amount: number): string => {
   return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+
+
+
+
 

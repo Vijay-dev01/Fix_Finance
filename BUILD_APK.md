@@ -164,3 +164,7 @@ eas build --platform android --profile preview
 
 The build will take 10-20 minutes, and you'll get a download link via email or in the terminal.
 
+
+
+
+
