@@ -11,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { useBudget } from '../context/BudgetContext';
+import { Alert } from 'react-native';
 import StatCard from '../components/StatCard';
 import BudgetProgressCard from '../components/BudgetProgressCard';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
@@ -24,7 +25,7 @@ type DashboardScreenNavigationProp = CompositeNavigationProp<
 
 const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
-  const { state, resetMonthlyBudget, carryOverBalance, allocateToSavings } =
+  const { state, resetMonthlyBudget, carryOverBalance, allocateToSavings, sendMonthlyReportManually } =
     useBudget();
   const [menuVisible, setMenuVisible] = React.useState(false);
 
@@ -39,6 +40,36 @@ const DashboardScreen: React.FC = () => {
     if (state.remainingBalance > 0) {
       allocateToSavings(state.remainingBalance);
       setMenuVisible(false);
+    }
+  };
+
+  const handleSendMonthlyReport = async () => {
+    try {
+      Alert.alert(
+        'Generating Report',
+        'Preparing monthly report and opening email composer...',
+        [{ text: 'OK' }]
+      );
+      const result = await sendMonthlyReportManually();
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          'Monthly report email has been opened! Please review and send the email.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          result.error || 'Could not generate report. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error?.message || 'Failed to generate monthly report',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -166,6 +197,25 @@ const DashboardScreen: React.FC = () => {
           </View>
         )}
 
+        {/* Send Monthly Report Button */}
+        <Card style={styles.reportCard} mode="outlined">
+          <Card.Content>
+            <Text style={styles.reportCardTitle}>📧 Monthly Report</Text>
+            <Text style={styles.reportCardDescription}>
+              Generate and send your monthly budget report via email
+            </Text>
+            <Button
+              mode="contained"
+              onPress={handleSendMonthlyReport}
+              style={styles.sendReportButton}
+              icon="email"
+              buttonColor={theme.colors.primary}
+            >
+              Send Monthly Report
+            </Button>
+          </Card.Content>
+        </Card>
+
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -277,6 +327,27 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  reportCard: {
+    margin: 16,
+    marginTop: 8,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.primary,
+    borderWidth: 1,
+  },
+  reportCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.onSurface,
+    marginBottom: 8,
+  },
+  reportCardDescription: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 16,
+  },
+  sendReportButton: {
+    marginTop: 8,
   },
   fab: {
     position: 'absolute',
