@@ -1,5 +1,4 @@
 import { TransactionType } from '../types';
-import { INITIAL_CATEGORIES } from '../constants/categories';
 
 export interface ParsedSMS {
   amount: number;

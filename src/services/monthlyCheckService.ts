@@ -5,6 +5,7 @@ import { sendMonthlyReportEmail } from './emailService';
 
 const LAST_CHECK_KEY = '@last_monthly_check';
 const LAST_REPORT_MONTH_KEY = '@last_report_month';
+const PENDING_CONFIRMATION_MONTH_KEY = '@pending_confirmation_month';
 
 /**
  * Check if we've moved to a new month
@@ -29,8 +30,8 @@ export const isEndOfMonth = (): boolean => {
 /**
  * Check if we should generate and send monthly report
  * This checks if:
- * 1. We're at the end of the month (last day), OR
- * 2. We've moved to a new month and haven't sent report for previous month yet
+ * 1. We're at the end of the month (last day) - open composer for current month, OR
+ * 2. We've moved to a new month and have pending confirmation (handled separately in UI)
  */
 export const shouldGenerateMonthlyReport = async (
   stateMonth: string
@@ -38,26 +39,19 @@ export const shouldGenerateMonthlyReport = async (
   try {
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     const currentMonth = getCurrentMonth();
-    
-    // Check if we've already sent a report for the state's month
+
+    // Already sent report for this month (pending user confirmation)
     const lastReportMonth = await AsyncStorage.getItem(LAST_REPORT_MONTH_KEY);
-    
     if (lastReportMonth === stateMonth) {
-      // Already sent report for this month
       return false;
     }
-    
-    // Case 1: It's the end of the month (last day) - send report for current month
+
+    // End of month (last day): auto-open composer for current month
     if (isEndOfMonth() && stateMonth === currentMonth) {
       return true;
     }
-    
-    // Case 2: We've moved to a new month but haven't sent report for previous month
-    // This handles when app wasn't opened on the last day
-    if (stateMonth !== currentMonth && lastReportMonth !== stateMonth) {
-      return true;
-    }
-    
+
+    // New month but we haven't sent for previous month - don't auto-send here; user can send manually
     return false;
   } catch (error) {
     console.error('Error checking if should generate report:', error);
@@ -66,12 +60,39 @@ export const shouldGenerateMonthlyReport = async (
 };
 
 /**
- * Mark that report has been sent for the current month
+ * Check if we're in a new month and have a pending confirmation for the stored (previous) month.
+ * UI should show "Did you receive the email?" and only delete data after user confirms.
+ */
+export const getPendingConfirmationMonth = async (): Promise<string | null> => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    return await AsyncStorage.getItem(PENDING_CONFIRMATION_MONTH_KEY);
+  } catch (error) {
+    console.error('Error getting pending confirmation month:', error);
+    return null;
+  }
+};
+
+/**
+ * User confirmed they received the email. Clear pending and allow data reset.
+ */
+export const confirmReportReceived = async (): Promise<void> => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.removeItem(PENDING_CONFIRMATION_MONTH_KEY);
+  } catch (error) {
+    console.error('Error confirming report received:', error);
+  }
+};
+
+/**
+ * Mark that report has been sent for the given month (data is NOT deleted until user confirms next month).
  */
 export const markReportSent = async (month: string): Promise<void> => {
   try {
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     await AsyncStorage.setItem(LAST_REPORT_MONTH_KEY, month);
+    await AsyncStorage.setItem(PENDING_CONFIRMATION_MONTH_KEY, month);
     await AsyncStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
   } catch (error) {
     console.error('Error marking report as sent:', error);
@@ -79,26 +100,19 @@ export const markReportSent = async (month: string): Promise<void> => {
 };
 
 /**
- * Process monthly report: generate, send email, and reset data
+ * Process monthly report: generate and send email. Do NOT delete data.
+ * Data is deleted only after user confirms receipt in the next month.
  */
 export const processMonthlyReport = async (
   state: BudgetState,
-  onReset: () => void
+  _onReset: () => void
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Generate report
     const report = generateMonthlyReport(state);
-    
-    // Send email
-    const emailResult = await sendMonthlyReportEmail(report);
-    
+    const emailResult = await sendMonthlyReportEmail(report, { automated: true });
+
     if (emailResult.success) {
-      // Mark report as sent
       await markReportSent(state.currentMonth);
-      
-      // Reset monthly data
-      onReset();
-      
       return { success: true };
     } else {
       return {
@@ -116,17 +130,39 @@ export const processMonthlyReport = async (
 };
 
 /**
- * Check and process monthly report if needed
- * This should be called periodically (e.g., when app opens, or via background task)
+ * Check and process monthly report if needed.
+ * - End of month: open composer automatically (no permission dialog). On send, mark pending confirmation; do not delete data.
+ * - New month with pending confirmation: return needsConfirmation so UI can ask user to confirm before deleting.
  */
 export const checkAndProcessMonthlyReport = async (
   state: BudgetState,
   onReset: () => void
-): Promise<{ processed: boolean; success?: boolean; error?: string }> => {
+): Promise<{
+  processed: boolean;
+  success?: boolean;
+  error?: string;
+  needsConfirmation?: boolean;
+  pendingMonth?: string;
+}> => {
   try {
-    // Use the state's current month (which might be previous month if we've moved to new month)
+    const currentMonth = getCurrentMonth();
+
+    // New month and we have pending confirmation for the stored (previous) month
+    if (state.currentMonth !== currentMonth) {
+      const pendingMonth = await getPendingConfirmationMonth();
+      if (pendingMonth === state.currentMonth) {
+        return {
+          processed: false,
+          needsConfirmation: true,
+          pendingMonth: state.currentMonth,
+        };
+      }
+      // No pending confirmation: don't auto-send; caller can reset to new month if desired
+      return { processed: false };
+    }
+
+    // Same month: check if we should open composer (end of month)
     const shouldProcess = await shouldGenerateMonthlyReport(state.currentMonth);
-    
     if (shouldProcess) {
       const result = await processMonthlyReport(state, onReset);
       return {
@@ -135,7 +171,7 @@ export const checkAndProcessMonthlyReport = async (
         error: result.error,
       };
     }
-    
+
     return { processed: false };
   } catch (error: any) {
     console.error('Error in monthly check:', error);
@@ -147,19 +183,14 @@ export const checkAndProcessMonthlyReport = async (
 };
 
 /**
- * Manually send monthly report without resetting data
- * This allows users to send the report anytime without automatic reset
+ * Manually send monthly report: PDF attachment only, no body text. Does not reset data.
  */
 export const sendMonthlyReportManually = async (
   state: BudgetState
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Generate report
     const report = generateMonthlyReport(state);
-    
-    // Send email (without resetting)
-    const emailResult = await sendMonthlyReportEmail(report);
-    
+    const emailResult = await sendMonthlyReportEmail(report, { automated: false });
     if (emailResult.success) {
       return { success: true };
     } else {

@@ -38,5 +38,7 @@ export type BudgetAction =
   | { type: 'CARRY_OVER_BALANCE' }
   | { type: 'ALLOCATE_TO_SAVINGS'; amount: number }
   | { type: 'LOAD_DATA'; data: BudgetState }
-  | { type: 'UPDATE_CATEGORY'; categoryId: string; updates: Partial<Category> };
+  | { type: 'UPDATE_CATEGORY'; categoryId: string; updates: Partial<Category> }
+  | { type: 'ADD_CATEGORY'; category: Omit<Category, 'budget' | 'spent' | 'transactions'> }
+  | { type: 'DELETE_CATEGORY'; categoryId: string };
 

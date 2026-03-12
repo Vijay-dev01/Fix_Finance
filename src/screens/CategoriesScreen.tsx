@@ -5,18 +5,29 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
-import { Text, Button, Dialog, Portal, Divider, SegmentedButtons } from 'react-native-paper';
+import {
+  Text,
+  Button,
+  Dialog,
+  Portal,
+  SegmentedButtons,
+  FAB,
+} from 'react-native-paper';
 import { useBudget } from '../context/BudgetContext';
 import BudgetProgressCard from '../components/BudgetProgressCard';
 import { theme } from '../theme';
-import { formatCurrency } from '../constants/categories';
+import { formatCurrency, CATEGORY_ICON_OPTIONS } from '../constants/categories';
 
 const CategoriesScreen: React.FC = () => {
-  const { state, setBudget, setSpent } = useBudget();
+  const { state, setBudget, setSpent, addCategory, deleteCategory } = useBudget();
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'budget' | 'spent'>('budget');
   const [amount, setAmount] = useState('');
+  const [addDialogVisible, setAddDialogVisible] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState(CATEGORY_ICON_OPTIONS[0].emoji);
 
   const handleEditBudget = (categoryId: string, currentBudget: number) => {
     setEditingCategory(categoryId);
@@ -56,6 +67,38 @@ const CategoriesScreen: React.FC = () => {
     setEditMode('budget');
   };
 
+  const handleAddCategory = () => {
+    const name = newCategoryName.trim();
+    if (!name) {
+      Alert.alert('Missing name', 'Please enter a category name.');
+      return;
+    }
+    addCategory(name, selectedIcon);
+    setAddDialogVisible(false);
+    setNewCategoryName('');
+    setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    const cat = state.categories.find(c => c.id === categoryId);
+    if (!cat) return;
+    if (cat.transactions.length > 0) {
+      Alert.alert(
+        'Cannot delete',
+        'Remove or reassign transactions from this category before deleting it.'
+      );
+      return;
+    }
+    Alert.alert(
+      'Delete category',
+      `Delete "${cat.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(categoryId) },
+      ]
+    );
+  };
+
   const sortedCategories = [...state.categories].sort((a, b) => {
     // Sort by budget amount (highest first), then by name
     if (b.budget !== a.budget) {
@@ -64,17 +107,21 @@ const CategoriesScreen: React.FC = () => {
     return a.name.localeCompare(b.name);
   });
 
+  const isEmpty = state.categories.length === 0;
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Budget Categories</Text>
           <Text style={styles.headerSubtitle}>
-            {state.categories.filter(cat => cat.budget > 0).length} of{' '}
-            {state.categories.length} categories configured
+            {isEmpty
+              ? 'Add categories to start budgeting'
+              : `${state.categories.filter(cat => cat.budget > 0).length} of ${state.categories.length} categories configured`}
           </Text>
         </View>
 
+        {!isEmpty && (
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total Budget:</Text>
@@ -105,7 +152,25 @@ const CategoriesScreen: React.FC = () => {
             </Text>
           </View>
         </View>
+        )}
 
+        {isEmpty ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📂</Text>
+            <Text style={styles.emptyTitle}>No categories yet</Text>
+            <Text style={styles.emptySubtitle}>
+              After monthly reset you can create your own budget categories. Add your first one to get started.
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => setAddDialogVisible(true)}
+              style={styles.emptyButton}
+              icon="plus"
+            >
+              Add your first category
+            </Button>
+          </View>
+        ) : (
         <View style={styles.categoriesContainer}>
           {sortedCategories.map(category => (
             <View key={category.id} style={styles.categoryWrapper}>
@@ -132,11 +197,78 @@ const CategoriesScreen: React.FC = () => {
                 >
                   Edit Spent
                 </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => handleDeleteCategory(category.id)}
+                  style={[styles.editButton, styles.deleteButton]}
+                  compact
+                  textColor={theme.colors.error}
+                >
+                  Delete
+                </Button>
               </View>
             </View>
           ))}
         </View>
+        )}
       </ScrollView>
+
+      {!isEmpty && (
+        <FAB
+          style={styles.fab}
+          icon="plus"
+          label="Add category"
+          onPress={() => setAddDialogVisible(true)}
+        />
+      )}
+
+      {/* Add Category Dialog */}
+      <Portal>
+        <Dialog
+          visible={addDialogVisible}
+          onDismiss={() => {
+            setAddDialogVisible(false);
+            setNewCategoryName('');
+            setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
+          }}
+          style={styles.dialog}
+        >
+          <Dialog.Title>New category</Dialog.Title>
+          <Dialog.Content>
+            <Text style={styles.dialogLabel}>Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Groceries, Rent"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              autoFocus
+            />
+            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>Icon</Text>
+            <View style={styles.iconGrid}>
+              {CATEGORY_ICON_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    styles.iconOption,
+                    selectedIcon === opt.emoji && styles.iconOptionSelected,
+                  ]}
+                  onPress={() => setSelectedIcon(opt.emoji)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.iconEmoji}>{opt.emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setAddDialogVisible(false)}>Cancel</Button>
+            <Button onPress={handleAddCategory} mode="contained">
+              Add
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       <Portal>
         <Dialog
@@ -258,18 +390,87 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     padding: 16,
     paddingTop: 0,
+    paddingBottom: 80,
   },
   categoryWrapper: {
     marginBottom: 16,
   },
   buttonRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'flex-end',
     marginTop: 8,
+    gap: 8,
   },
   editButton: {
     marginLeft: 8,
-    minWidth: 120,
+    minWidth: 100,
+  },
+  deleteButton: {
+    borderColor: theme.colors.error,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.primary,
+  },
+  emptyState: {
+    flex: 1,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 280,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.onSurface,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  emptyButton: {
+    marginTop: 8,
+  },
+  dialogLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.onSurface,
+    marginBottom: 8,
+  },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 8,
+  },
+  iconOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconOptionSelected: {
+    backgroundColor: theme.colors.primaryContainer,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  iconEmoji: {
+    fontSize: 24,
   },
   dialog: {
     backgroundColor: theme.colors.surface,

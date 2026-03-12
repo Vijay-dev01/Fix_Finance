@@ -43,6 +43,21 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
+  const showMenuHelp = () => {
+    setMenuVisible(false);
+    Alert.alert(
+      'Menu actions explained',
+      [
+        '• Reset Monthly Budget: Clears all income and expenses for this month. Category names and budget amounts stay; spent and transactions are set to zero. Use when starting a new month.',
+        '',
+        '• Carry Over Balance: Adds your current Remaining amount to next month\'s budgets by splitting it equally across all categories. E.g. ₹3000 remaining with 3 categories → each category gets +₹1000 budget. Your categories and spending data stay as-is.',
+        '',
+        '• Allocate to Savings: Marks your current Remaining as "saved"—it reduces the Remaining balance to zero (or by the amount you allocate). Use when you\'ve actually moved that money to savings. It does not add a transaction or change category budgets.',
+      ].join('\n'),
+      [{ text: 'OK' }]
+    );
+  };
+
   const handleSendMonthlyReport = async () => {
     try {
       Alert.alert(
@@ -79,7 +94,11 @@ const DashboardScreen: React.FC = () => {
         {/* Header with Menu */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Budget Overview</Text>
-          <Menu
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={showMenuHelp} style={styles.helpButton}>
+              <Text style={styles.helpButtonText}>?</Text>
+            </TouchableOpacity>
+            <Menu
             visible={menuVisible}
             onDismiss={() => setMenuVisible(false)}
             anchor={
@@ -99,6 +118,7 @@ const DashboardScreen: React.FC = () => {
             <Menu.Item
               onPress={carryOverBalance}
               title="Carry Over Balance"
+              disabled={state.categories.length === 0}
             />
             <Menu.Item
               onPress={handleAllocateToSavings}
@@ -106,6 +126,7 @@ const DashboardScreen: React.FC = () => {
               disabled={state.remainingBalance <= 0}
             />
           </Menu>
+          </View>
         </View>
 
         {/* Stats Cards */}
@@ -267,6 +288,24 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.onSurface,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  helpButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  helpButtonText: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: theme.colors.onSurface,
   },

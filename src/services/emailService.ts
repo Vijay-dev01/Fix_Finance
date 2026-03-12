@@ -18,14 +18,18 @@ export const isMailAvailable = async (): Promise<boolean> => {
 
 /**
  * Send monthly report via email using device mail app with PDF attachment
- * Note: This requires user interaction to send the email
+ * - automated (month-end): subject + body (summary) + PDF attachment
+ * - manual: subject + PDF attachment only, no body text
  */
 export const sendMonthlyReportEmail = async (
-  report: MonthlyReport
+  report: MonthlyReport,
+  options: { automated?: boolean } = {}
 ): Promise<{ success: boolean; error?: string }> => {
+  const { automated = true } = options;
+
   try {
     const available = await isMailAvailable();
-    
+
     if (!available) {
       return {
         success: false,
@@ -35,28 +39,27 @@ export const sendMonthlyReportEmail = async (
 
     const monthName = report.month.split('-').reverse().join('-');
     const subject = `Monthly Budget Report - ${monthName}`;
-    
-    // Generate PDF report
+
     let pdfUri: string | undefined;
     try {
       pdfUri = await generatePDFReport(report);
     } catch (pdfError: any) {
       console.error('Error generating PDF, sending email without attachment:', pdfError);
-      // Continue without PDF if generation fails
     }
 
-    // Generate email body
     const htmlBody = generateEmailBody(report);
     const plainTextBody = generatePlainTextBody(report);
 
-    // Prepare email with PDF attachment if available
     const emailOptions: MailComposer.MailComposerOptions = {
       recipients: [RECIPIENT_EMAIL],
       subject,
-      body: pdfUri 
-        ? `Please find the detailed monthly budget report attached as PDF.\n\n${plainTextBody}`
-        : htmlBody,
-      isHtml: !pdfUri, // Use plain text if PDF is attached, HTML otherwise
+      body:
+        automated && pdfUri
+          ? `Please find the detailed monthly budget report attached as PDF.\n\n${plainTextBody}`
+          : automated
+            ? htmlBody
+            : '', // manual: PDF only, no body
+      isHtml: automated && !pdfUri,
       attachments: pdfUri ? [pdfUri] : undefined,
     };
 

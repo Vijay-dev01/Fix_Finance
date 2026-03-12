@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from 'react';
+import { AppState, AppStateStatus, Alert } from 'react-native';
 import { BudgetState, BudgetAction, Transaction } from '../types';
 import { budgetReducer, initialState } from '../reducers/budgetReducer';
 import { saveBudgetData, loadBudgetData } from '../utils/storage';
-import { getCurrentMonth } from '../constants/categories';
+import { getCurrentMonth, slugifyCategoryName } from '../constants/categories';
 import LoadingScreen from '../components/LoadingScreen';
-import { checkAndProcessMonthlyReport, sendMonthlyReportManually as sendReportManually } from '../services/monthlyCheckService';
+import { checkAndProcessMonthlyReport, sendMonthlyReportManually as sendReportManually, getPendingConfirmationMonth, confirmReportReceived } from '../services/monthlyCheckService';
 
 interface BudgetContextType {
   state: BudgetState;
@@ -19,13 +19,50 @@ interface BudgetContextType {
   allocateToSavings: (amount: number) => void;
   generateAndSendMonthlyReport: () => Promise<{ success: boolean; error?: string }>;
   sendMonthlyReportManually: () => Promise<{ success: boolean; error?: string }>;
+  /** When in new month and email was sent last month, show "Did you receive the email?" Only after confirm, data is deleted. */
+  pendingConfirmationMonth: string | null;
+  confirmReportReceivedAndReset: () => Promise<void>;
+  addCategory: (name: string, icon: string) => void;
+  deleteCategory: (categoryId: string) => void;
 }
 
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
+function formatMonthLabel(monthStr: string): string {
+  try {
+    const [y, m] = monthStr.split('-');
+    const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'long' });
+  } catch {
+    return monthStr;
+  }
+}
+
+const MonthlyReportConfirmationDialog: React.FC = () => {
+  const { pendingConfirmationMonth, confirmReportReceivedAndReset } = useBudget();
+  const shownRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingConfirmationMonth || shownRef.current === pendingConfirmationMonth) return;
+    shownRef.current = pendingConfirmationMonth;
+    const label = formatMonthLabel(pendingConfirmationMonth);
+    Alert.alert(
+      'Confirm email received',
+      `Did you successfully receive the monthly report email for ${label}? Only after you confirm will last month's data be cleared.`,
+      [
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes, received', onPress: () => confirmReportReceivedAndReset() },
+      ]
+    );
+  }, [pendingConfirmationMonth, confirmReportReceivedAndReset]);
+
+  return null;
+};
+
 export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(budgetReducer, initialState);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [pendingConfirmationMonth, setPendingConfirmationMonth] = React.useState<string | null>(null);
   const isInitialMount = React.useRef(true);
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const monthlyCheckDoneRef = React.useRef(false);
@@ -56,65 +93,36 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           // Check if we need to reset for new month
           const currentMonth = getCurrentMonth();
           if (migratedData.currentMonth !== currentMonth) {
-            // New month detected - check if we need to send monthly report first
-            // This handles the case where app wasn't opened on the last day of previous month
+            // New month: check for pending confirmation (email was sent last month, wait for user to confirm)
+            const pendingMonth = await getPendingConfirmationMonth();
+            if (pendingMonth === migratedData.currentMonth && isMounted) {
+              setPendingConfirmationMonth(migratedData.currentMonth);
+              dispatch({ type: 'LOAD_DATA', data: migratedData });
+              isInitialMount.current = false;
+              if (isMounted) setIsLoading(false);
+              return;
+            }
+            // No pending confirmation: reset to new month
             if (!monthlyCheckDoneRef.current && isMounted) {
               monthlyCheckDoneRef.current = true;
-              // Check if we should process monthly report for the previous month
-              checkAndProcessMonthlyReport(migratedData, () => {
-                // This will be called after email is sent to reset data
-                const resetData: BudgetState = {
-                  ...migratedData,
-                  currentMonth,
-                  categories: migratedData.categories.map(cat => ({
-                    ...cat,
-                    spent: 0,
-                    transactions: [],
-                  })),
-                  totalSpent: 0,
-                  incomeTransactions: [],
-                  totalIncome: 0,
-                  remainingBalance: migratedData.totalBudget,
-                };
-                dispatch({ type: 'LOAD_DATA', data: resetData });
-              }).catch(err => {
-                console.error('Error in monthly check:', err);
-                // If check fails, just reset normally
-                const resetData: BudgetState = {
-                  ...migratedData,
-                  currentMonth,
-                  categories: migratedData.categories.map(cat => ({
-                    ...cat,
-                    spent: 0,
-                    transactions: [],
-                  })),
-                  totalSpent: 0,
-                  incomeTransactions: [],
-                  totalIncome: 0,
-                  remainingBalance: migratedData.totalBudget,
-                };
-                dispatch({ type: 'LOAD_DATA', data: resetData });
-              });
-            } else {
-              // Already checked or not mounted, just reset
-              const resetData: BudgetState = {
-                ...migratedData,
-                currentMonth,
-                categories: migratedData.categories.map(cat => ({
-                  ...cat,
-                  spent: 0,
-                  transactions: [],
-                })),
-                totalSpent: 0,
-                incomeTransactions: [],
-                totalIncome: 0,
-                remainingBalance: migratedData.totalBudget,
-              };
-              dispatch({ type: 'LOAD_DATA', data: resetData });
             }
+            const resetData: BudgetState = {
+              ...migratedData,
+              currentMonth,
+              categories: migratedData.categories.map(cat => ({
+                ...cat,
+                spent: 0,
+                transactions: [],
+              })),
+              totalSpent: 0,
+              incomeTransactions: [],
+              totalIncome: 0,
+              remainingBalance: migratedData.totalBudget,
+            };
+            dispatch({ type: 'LOAD_DATA', data: resetData });
           } else {
             dispatch({ type: 'LOAD_DATA', data: migratedData });
-            // Check for monthly report even if same month (in case it's end of month)
+            // End of month: auto-open composer (no permission dialog). On send we mark pending; we do NOT reset.
             if (!monthlyCheckDoneRef.current && isMounted) {
               monthlyCheckDoneRef.current = true;
               setTimeout(() => {
@@ -123,7 +131,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 }).catch(err => {
                   console.error('Error in monthly check:', err);
                 });
-              }, 2000); // Wait 2 seconds after app loads
+              }, 2000);
             }
           }
         }
@@ -278,6 +286,42 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const confirmReportReceivedAndReset = async (): Promise<void> => {
+    if (!pendingConfirmationMonth) return;
+    await confirmReportReceived();
+    setPendingConfirmationMonth(null);
+    const currentMonth = getCurrentMonth();
+    dispatch({
+      type: 'LOAD_DATA',
+      data: {
+        ...state,
+        currentMonth,
+        categories: state.categories.map(cat => ({
+          ...cat,
+          spent: 0,
+          transactions: [],
+        })),
+        totalSpent: 0,
+        incomeTransactions: [],
+        totalIncome: 0,
+        remainingBalance: state.totalBudget,
+      },
+    });
+  };
+
+  const addCategory = (name: string, icon: string) => {
+    const baseId = slugifyCategoryName(name) || 'category';
+    const id = `${baseId}-${Date.now()}`;
+    dispatch({
+      type: 'ADD_CATEGORY',
+      category: { id, name: name.trim(), icon },
+    });
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    dispatch({ type: 'DELETE_CATEGORY', categoryId });
+  };
+
   // Show loading state while initial data is being loaded
   if (isLoading) {
     return <LoadingScreen />;
@@ -297,8 +341,13 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         allocateToSavings,
         generateAndSendMonthlyReport,
         sendMonthlyReportManually,
+        pendingConfirmationMonth,
+        confirmReportReceivedAndReset,
+        addCategory,
+        deleteCategory,
       }}
     >
+      <MonthlyReportConfirmationDialog />
       {children}
     </BudgetContext.Provider>
   );

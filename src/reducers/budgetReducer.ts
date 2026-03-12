@@ -1,5 +1,5 @@
-import { BudgetState, BudgetAction, Transaction } from '../types';
-import { INITIAL_CATEGORIES, getCurrentMonth } from '../constants/categories';
+import { BudgetState, BudgetAction, Transaction, Category } from '../types';
+import { getCurrentMonth } from '../constants/categories';
 
 const calculateTotals = (
   categories: BudgetState['categories'],
@@ -18,7 +18,7 @@ const calculateCategorySpent = (transactions: Transaction[]): number => {
 };
 
 export const initialState: BudgetState = {
-  categories: INITIAL_CATEGORIES,
+  categories: [],
   totalBudget: 0,
   totalSpent: 0,
   totalIncome: 0,
@@ -161,9 +161,8 @@ export const budgetReducer = (
     }
 
     case 'CARRY_OVER_BALANCE': {
-      // Carry over remaining balance to next month's budget
       const carryOverAmount = state.remainingBalance;
-      if (carryOverAmount > 0) {
+      if (carryOverAmount > 0 && state.categories.length > 0) {
         const updatedCategories = state.categories.map(cat => ({
           ...cat,
           budget: cat.budget + (carryOverAmount / state.categories.length),
@@ -191,12 +190,11 @@ export const budgetReducer = (
     }
 
     case 'LOAD_DATA': {
-      // Ensure all required fields are present
       const loadedData = action.data;
       return {
         ...initialState,
         ...loadedData,
-        categories: loadedData.categories || initialState.categories,
+        categories: Array.isArray(loadedData.categories) ? loadedData.categories : [],
         totalBudget: loadedData.totalBudget ?? 0,
         totalSpent: loadedData.totalSpent ?? 0,
         totalIncome: loadedData.totalIncome ?? 0,
@@ -212,6 +210,34 @@ export const budgetReducer = (
         cat.id === action.categoryId
           ? { ...cat, ...action.updates }
           : cat
+      );
+      const totals = calculateTotals(updatedCategories, state.totalIncome);
+      return {
+        ...state,
+        categories: updatedCategories,
+        ...totals,
+      };
+    }
+
+    case 'ADD_CATEGORY': {
+      const newCategory: Category = {
+        ...action.category,
+        budget: 0,
+        spent: 0,
+        transactions: [],
+      };
+      const updatedCategories = [...state.categories, newCategory];
+      const totals = calculateTotals(updatedCategories, state.totalIncome);
+      return {
+        ...state,
+        categories: updatedCategories,
+        ...totals,
+      };
+    }
+
+    case 'DELETE_CATEGORY': {
+      const updatedCategories = state.categories.filter(
+        cat => cat.id !== action.categoryId
       );
       const totals = calculateTotals(updatedCategories, state.totalIncome);
       return {

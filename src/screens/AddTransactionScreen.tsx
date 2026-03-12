@@ -17,7 +17,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useBudget } from '../context/BudgetContext';
 import { TransactionType } from '../types';
 import { theme } from '../theme';
-import { INITIAL_CATEGORIES } from '../constants/categories';
 
 const AddTransactionScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -40,6 +39,11 @@ const AddTransactionScreen: React.FC = () => {
 
     if (type === 'expense' && !selectedCategory) {
       Alert.alert('Missing Category', 'Please select a category for expenses.');
+      return;
+    }
+
+    if (type === 'expense' && state.categories.length === 0) {
+      Alert.alert('No categories', 'Add at least one category from the Categories tab first.');
       return;
     }
 
@@ -123,6 +127,15 @@ const AddTransactionScreen: React.FC = () => {
           {type === 'expense' && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Category</Text>
+              {state.categories.length === 0 ? (
+                <Card style={styles.categoryCard} mode="outlined">
+                  <Card.Content>
+                    <Text style={styles.emptyCategoriesText}>
+                      No categories yet. Add budget categories from the Categories tab first.
+                    </Text>
+                  </Card.Content>
+                </Card>
+              ) : (
               <Card style={styles.categoryCard} mode="outlined">
                 <Card.Content>
                   <RadioButton.Group
@@ -146,6 +159,7 @@ const AddTransactionScreen: React.FC = () => {
                   </RadioButton.Group>
                 </Card.Content>
               </Card>
+              )}
             </View>
           )}
 
@@ -225,6 +239,12 @@ const styles = StyleSheet.create({
   addButtonLabel: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  emptyCategoriesText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });
 
