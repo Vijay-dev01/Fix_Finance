@@ -258,6 +258,14 @@ const DashboardScreen: React.FC = () => {
               View Categories
             </Button>
           </View>
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('Transactions')}
+            style={styles.historyButton}
+            icon="format-list-bulleted"
+          >
+            View transaction history
+          </Button>
         </View>
       </ScrollView>
 
@@ -365,6 +373,10 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    marginHorizontal: 4,
+  },
+  historyButton: {
+    marginTop: 12,
     marginHorizontal: 4,
   },
   reportCard: {

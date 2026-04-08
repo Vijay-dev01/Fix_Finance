@@ -28,6 +28,8 @@ const CategoriesScreen: React.FC = () => {
   const [addDialogVisible, setAddDialogVisible] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(CATEGORY_ICON_OPTIONS[0].emoji);
+  /** When set, overrides grid selection (any emoji from Gboard / system keyboard) */
+  const [keyboardEmoji, setKeyboardEmoji] = useState('');
 
   const handleEditBudget = (categoryId: string, currentBudget: number) => {
     setEditingCategory(categoryId);
@@ -73,10 +75,16 @@ const CategoriesScreen: React.FC = () => {
       Alert.alert('Missing name', 'Please enter a category name.');
       return;
     }
-    addCategory(name, selectedIcon);
+    const icon = keyboardEmoji.trim() || selectedIcon;
+    if (!icon) {
+      Alert.alert('Missing icon', 'Pick an icon from the grid or type an emoji from your keyboard.');
+      return;
+    }
+    addCategory(name, icon);
     setAddDialogVisible(false);
     setNewCategoryName('');
     setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
+    setKeyboardEmoji('');
   };
 
   const handleDeleteCategory = (categoryId: string) => {
@@ -230,6 +238,7 @@ const CategoriesScreen: React.FC = () => {
             setAddDialogVisible(false);
             setNewCategoryName('');
             setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
+            setKeyboardEmoji('');
           }}
           style={styles.dialog}
         >
@@ -251,15 +260,42 @@ const CategoriesScreen: React.FC = () => {
                   key={opt.id}
                   style={[
                     styles.iconOption,
-                    selectedIcon === opt.emoji && styles.iconOptionSelected,
+                    selectedIcon === opt.emoji &&
+                      !keyboardEmoji.trim() &&
+                      styles.iconOptionSelected,
                   ]}
-                  onPress={() => setSelectedIcon(opt.emoji)}
+                  onPress={() => {
+                    setSelectedIcon(opt.emoji);
+                    setKeyboardEmoji('');
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.iconEmoji}>{opt.emoji}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>
+              Or emoji from keyboard
+            </Text>
+            <TextInput
+              style={styles.emojiKeyboardInput}
+              placeholder="Tap here, then pick emoji on keyboard"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={keyboardEmoji}
+              onChangeText={setKeyboardEmoji}
+              maxLength={32}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {(keyboardEmoji.trim() || selectedIcon) && (
+              <Text style={styles.emojiPreview}>
+                Preview:{' '}
+                <Text style={styles.emojiPreviewLarge}>
+                  {keyboardEmoji.trim() || selectedIcon}
+                </Text>
+              </Text>
+            )}
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setAddDialogVisible(false)}>Cancel</Button>
@@ -471,6 +507,32 @@ const styles = StyleSheet.create({
   },
   iconEmoji: {
     fontSize: 24,
+  },
+  emojiHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  emojiKeyboardInput: {
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 32,
+    color: theme.colors.onSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    textAlign: 'center',
+  },
+  emojiPreview: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 12,
+  },
+  emojiPreviewLarge: {
+    fontSize: 28,
+    color: theme.colors.onSurface,
   },
   dialog: {
     backgroundColor: theme.colors.surface,

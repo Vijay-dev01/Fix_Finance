@@ -8,6 +8,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Dashboard: undefined;
   Categories: undefined;
+  Transactions: undefined;
   SMSTracking: undefined;
 };
 
