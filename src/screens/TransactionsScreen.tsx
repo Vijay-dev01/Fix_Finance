@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Card } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Text, Card, Button } from 'react-native-paper';
 import { useBudget } from '../context/BudgetContext';
 import { theme } from '../theme';
 import { formatCurrency } from '../constants/categories';
@@ -8,6 +8,8 @@ import { Transaction } from '../types';
 
 type RowItem = {
   key: string;
+  transactionId: string;
+  categoryId: string;
   date: string;
   description: string;
   amount: number;
@@ -33,7 +35,22 @@ const formatDateTime = (iso: string): string => {
 };
 
 const TransactionsScreen: React.FC = () => {
-  const { state } = useBudget();
+  const { state, deleteTransaction } = useBudget();
+
+  const handleDeleteTransaction = (row: RowItem) => {
+    Alert.alert(
+      'Delete transaction',
+      `Delete "${row.description}" (${formatCurrency(row.amount)})? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteTransaction(row.transactionId, row.categoryId),
+        },
+      ]
+    );
+  };
 
   const rows = useMemo(() => {
     const list: RowItem[] = [];
@@ -41,6 +58,8 @@ const TransactionsScreen: React.FC = () => {
     state.incomeTransactions.forEach((t: Transaction) => {
       list.push({
         key: `income-${t.id}`,
+        transactionId: t.id,
+        categoryId: 'income',
         date: t.date,
         description: t.description || '—',
         amount: t.amount,
@@ -54,6 +73,8 @@ const TransactionsScreen: React.FC = () => {
       cat.transactions.forEach((t: Transaction) => {
         list.push({
           key: `exp-${t.id}-${cat.id}`,
+          transactionId: t.id,
+          categoryId: cat.id,
           date: t.date,
           description: t.description || '—',
           amount: t.amount,
@@ -108,10 +129,21 @@ const TransactionsScreen: React.FC = () => {
                   {row.description}
                 </Text>
                 <View style={styles.metaRow}>
-                  <Text style={styles.metaIcon}>{row.categoryIcon}</Text>
-                  <Text style={styles.metaLabel}>
-                    {row.type === 'income' ? 'Income' : row.categoryLabel}
-                  </Text>
+                  <View style={styles.metaLeft}>
+                    <Text style={styles.metaIcon}>{row.categoryIcon}</Text>
+                    <Text style={styles.metaLabel}>
+                      {row.type === 'income' ? 'Income' : row.categoryLabel}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={() => handleDeleteTransaction(row)}
+                    style={styles.deleteButton}
+                    compact
+                    textColor={theme.colors.error}
+                  >
+                    Delete
+                  </Button>
                 </View>
               </Card.Content>
             </Card>
@@ -174,6 +206,16 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  deleteButton: {
+    borderColor: theme.colors.error,
   },
   metaIcon: {
     fontSize: 18,
