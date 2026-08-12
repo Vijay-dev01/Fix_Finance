@@ -16,14 +16,19 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vstack"
+      "bundleIdentifier": "com.vstack",
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "VStack sends reminders when payments are due."
+      }
     },
     "android": {
       "package": "com.vstack",
       "versionCode": 1,
       "permissions": [
         "READ_SMS",
-        "RECEIVE_SMS"
+        "RECEIVE_SMS",
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM"
       ],
       "backgroundColor": "#000000",
       "adaptiveIcon": {
@@ -35,6 +40,15 @@
       "eas": {
         "projectId": "a8db8fcc-8924-4aa3-bb7b-b2f0d487d8ff"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35"
+        }
+      ]
+    ]
   }
 }

@@ -460,6 +460,8 @@ const generatePDFHTML = (report: MonthlyReport): string => {
     }
   });
 
+  html += buildPaymentPdfSection(report);
+
   html += `
   </div>
 
@@ -470,6 +472,93 @@ const generatePDFHTML = (report: MonthlyReport): string => {
 </body>
 </html>
 `;
+
+  return html;
+};
+
+const paymentStatusLabel = (status: string): string => {
+  if (status === 'received') return 'Received';
+  if (status === 'paid') return 'Paid';
+  return 'Pending';
+};
+
+const buildPaymentPdfSection = (report: MonthlyReport): string => {
+  const { payments } = report;
+  const renderTable = (
+    title: string,
+    headers: string[],
+    rows: string[][]
+  ): string => {
+    if (rows.length === 0) return '';
+    let t = `<div class="category-section"><div class="category-header"><span class="category-name">${title}</span></div>
+      <table class="transactions-table"><thead><tr>`;
+    headers.forEach(h => {
+      t += `<th>${h}</th>`;
+    });
+    t += '</tr></thead><tbody>';
+    rows.forEach(cells => {
+      t += '<tr>';
+      cells.forEach((cell, i) => {
+        const cls = i === 1 ? ' class="amount negative"' : '';
+        t += `<td${cls}>${cell}</td>`;
+      });
+      t += '</tr>';
+    });
+    t += '</tbody></table></div>';
+    return t;
+  };
+
+  let html = `
+  <div class="summary-section">
+    <div class="summary-title">Payment Tracker</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Money to Get (Pending)</div>
+        <div class="summary-value">${formatCurrency(payments.toGet.pendingTotal)}</div>
+        <div class="summary-label">${payments.toGet.count} payments</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Money to Give (Pending)</div>
+        <div class="summary-value">${formatCurrency(payments.toGive.pendingTotal)}</div>
+        <div class="summary-label">${payments.toGive.count} payments</div>
+      </div>
+    </div>
+  </div>`;
+
+  html += renderTable(
+    'Money to Get',
+    ['Name', 'Amount', 'Due', 'Status'],
+    payments.toGet.items.map(i => [
+      i.personName,
+      formatCurrency(i.amount),
+      i.dueDateLabel,
+      paymentStatusLabel(i.status),
+    ])
+  );
+
+  html += renderTable(
+    'Money to Give',
+    ['Name', 'Amount', 'Due', 'Status'],
+    payments.toGive.items.map(i => [
+      i.personName,
+      formatCurrency(i.amount),
+      i.dueDateLabel,
+      paymentStatusLabel(i.status),
+    ])
+  );
+
+  html += renderTable(
+    'Completed This Month',
+    ['Name', 'Amount', 'Type', 'Completed'],
+    payments.completedThisMonth.map(i => [
+      i.personName,
+      formatCurrency(i.amount),
+      i.type === 'get' ? 'Get' : 'Give',
+      i.completedAt
+        ? formatDate(i.completedAt)
+        : paymentStatusLabel(i.status),
+    ])
+  );
 
   return html;
 };

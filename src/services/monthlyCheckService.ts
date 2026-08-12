@@ -1,7 +1,9 @@
 import { BudgetState } from '../types';
 import { getCurrentMonth } from '../constants/categories';
-import { generateMonthlyReport } from './monthlyReportService';
+import { buildMonthlyReport } from './monthlyReportService';
 import { sendMonthlyReportEmail } from './emailService';
+import { loadPayments } from '../utils/paymentStorage';
+import { initialPaymentState } from '../reducers/paymentReducer';
 
 const LAST_CHECK_KEY = '@last_monthly_check';
 const LAST_REPORT_MONTH_KEY = '@last_report_month';
@@ -99,6 +101,11 @@ export const markReportSent = async (month: string): Promise<void> => {
   }
 };
 
+const loadReport = async (state: BudgetState) => {
+  const paymentState = (await loadPayments()) ?? initialPaymentState;
+  return buildMonthlyReport(state, paymentState);
+};
+
 /**
  * Process monthly report: generate and send email. Do NOT delete data.
  * Data is deleted only after user confirms receipt in the next month.
@@ -108,7 +115,7 @@ export const processMonthlyReport = async (
   _onReset: () => void
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const report = generateMonthlyReport(state);
+    const report = await loadReport(state);
     const emailResult = await sendMonthlyReportEmail(report, { automated: true });
 
     if (emailResult.success) {
@@ -189,7 +196,7 @@ export const sendMonthlyReportManually = async (
   state: BudgetState
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const report = generateMonthlyReport(state);
+    const report = await loadReport(state);
     const emailResult = await sendMonthlyReportEmail(report, { automated: false });
     if (emailResult.success) {
       return { success: true };

@@ -2,6 +2,7 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { BudgetProvider } from './src/context/BudgetContext';
+import { PaymentProvider } from './src/context/PaymentContext';
 import MainNavigator from './src/navigation/MainNavigator';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { theme } from './src/theme';
@@ -35,8 +36,10 @@ export default function App() {
     <ErrorBoundary>
       <PaperProvider theme={theme}>
         <BudgetProvider>
-          <StatusBar style="light" />
-          <MainNavigator />
+          <PaymentProvider>
+            <StatusBar style="light" />
+            <MainNavigator />
+          </PaymentProvider>
         </BudgetProvider>
       </PaperProvider>
     </ErrorBoundary>

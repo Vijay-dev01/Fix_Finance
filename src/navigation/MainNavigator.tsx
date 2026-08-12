@@ -5,8 +5,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList, MainTabParamList } from './types';
 import DashboardScreen from '../screens/DashboardScreen';
+import PaymentsScreen from '../screens/PaymentsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
+import AddPaymentScreen from '../screens/AddPaymentScreen';
 import SMSTrackingScreen from '../screens/SMSTrackingScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import { theme } from '../theme';
@@ -40,6 +42,16 @@ const MainTabs = () => {
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Payments"
+        component={PaymentsScreen}
+        options={{
+          title: 'Payments',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="cash-multiple" size={size} color={color} />
           ),
         }}
       />
@@ -101,6 +113,14 @@ const MainNavigator = () => {
           component={AddTransactionScreen}
           options={{
             title: 'Add Transaction',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="AddPayment"
+          component={AddPaymentScreen}
+          options={{
+            title: 'Add Payment',
             presentation: 'modal',
           }}
         />

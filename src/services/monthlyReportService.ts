@@ -1,5 +1,7 @@
 import { BudgetState, Transaction } from '../types';
+import { PaymentState } from '../types/payments';
 import { formatCurrency } from '../constants/categories';
+import { buildPaymentReportSection, PaymentReportSection } from './paymentService';
 
 export interface MonthlyReport {
   month: string;
@@ -15,12 +17,20 @@ export interface MonthlyReport {
     transactions: Transaction[];
   }>;
   incomeTransactions: Transaction[];
+  payments: PaymentReportSection;
 }
 
 /**
  * Generate a monthly report from budget state
  */
 export const generateMonthlyReport = (state: BudgetState): MonthlyReport => {
+  return buildMonthlyReport(state, { payments: [], lastCheckedMonth: state.currentMonth });
+};
+
+export const buildMonthlyReport = (
+  state: BudgetState,
+  paymentState: PaymentState
+): MonthlyReport => {
   return {
     month: state.currentMonth,
     totalIncome: state.totalIncome,
@@ -35,6 +45,7 @@ export const generateMonthlyReport = (state: BudgetState): MonthlyReport => {
       transactions: cat.transactions,
     })),
     incomeTransactions: state.incomeTransactions,
+    payments: buildPaymentReportSection(paymentState, state.currentMonth),
   };
 };
 
@@ -334,6 +345,8 @@ export const generateEmailBody = (report: MonthlyReport): string => {
     }
   });
 
+  html += buildPaymentEmailHtmlSection(report);
+
   html += `
           <!-- Footer -->
           <tr>
@@ -407,6 +420,8 @@ Budget: ${formatCurrency(category.budget)} | Spent: ${formatCurrency(category.sp
     }
   });
 
+  text += buildPaymentPlainTextSection(report);
+
   text += `
 ═══════════════════════════════════════════════════════════
 Generated automatically by VStack Budget Planner
@@ -416,3 +431,121 @@ Report Date: ${new Date().toLocaleDateString('en-IN')}
 
   return text;
 };
+
+const paymentStatusLabel = (status: string): string => {
+  if (status === 'received') return 'Received';
+  if (status === 'paid') return 'Paid';
+  return 'Pending';
+};
+
+export const buildPaymentPlainTextSection = (report: MonthlyReport): string => {
+  const { payments } = report;
+  let text = `
+PAYMENT TRACKER
+─────────────────────────────────────────────────────────
+Money to Get:  ${formatCurrency(payments.toGet.pendingTotal)} pending (${payments.toGet.count} payments)
+Money to Give: ${formatCurrency(payments.toGive.pendingTotal)} pending (${payments.toGive.count} payments)
+
+`;
+
+  if (payments.toGet.items.length > 0) {
+    text += `MONEY TO GET\n`;
+    payments.toGet.items.forEach(item => {
+      text += `  ${item.personName} | ${formatCurrency(item.amount)} | Due ${item.dueDateLabel} | ${paymentStatusLabel(item.status)}\n`;
+    });
+    text += '\n';
+  }
+
+  if (payments.toGive.items.length > 0) {
+    text += `MONEY TO GIVE\n`;
+    payments.toGive.items.forEach(item => {
+      text += `  ${item.personName} | ${formatCurrency(item.amount)} | Due ${item.dueDateLabel} | ${paymentStatusLabel(item.status)}\n`;
+    });
+    text += '\n';
+  }
+
+  if (payments.completedThisMonth.length > 0) {
+    text += `COMPLETED THIS MONTH\n`;
+    payments.completedThisMonth.forEach(item => {
+      const done = item.completedAt
+        ? formatDate(item.completedAt)
+        : paymentStatusLabel(item.status);
+      text += `  ${item.personName} | ${formatCurrency(item.amount)} | ${item.type === 'get' ? 'Get' : 'Give'} | ${done}\n`;
+    });
+    text += '\n';
+  }
+
+  return text;
+};
+
+export const buildPaymentEmailHtmlSection = (report: MonthlyReport): string => {
+  const { payments } = report;
+  const row = (cells: string[]) =>
+    `<tr>${cells.map(c => `<td style="padding: 12px 14px; font-size: 14px; color: #475569; border-bottom: 1px solid #f1f5f9;">${c}</td>`).join('')}</tr>`;
+
+  let html = `
+          <tr>
+            <td style="padding: 0 30px 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px;">
+                <tr><td>
+                  <h2 style="margin: 0 0 16px; font-size: 20px; color: #1e293b;">Payment Tracker</h2>
+                  <p style="margin: 0 0 16px; color: #475569;">
+                    Money to Get: <strong>${formatCurrency(payments.toGet.pendingTotal)}</strong> pending (${payments.toGet.count})
+                    &nbsp;|&nbsp;
+                    Money to Give: <strong>${formatCurrency(payments.toGive.pendingTotal)}</strong> pending (${payments.toGive.count})
+                  </p>`;
+
+  const table = (title: string, items: typeof payments.toGet.items) => {
+    if (items.length === 0) return '';
+    let t = `<h3 style="margin: 20px 0 12px; font-size: 16px; color: #1e293b;">${title}</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <thead><tr style="background: #667eea;">
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Name</th>
+          <th style="padding: 12px 14px; text-align: right; color: #fff; font-size: 12px;">Amount</th>
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Due</th>
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Status</th>
+        </tr></thead><tbody>`;
+    items.forEach(item => {
+      t += row([
+        item.personName.replace(/</g, '&lt;'),
+        formatCurrency(item.amount),
+        item.dueDateLabel,
+        paymentStatusLabel(item.status),
+      ]);
+    });
+    t += '</tbody></table>';
+    return t;
+  };
+
+  html += table('Money to Get', payments.toGet.items);
+  html += table('Money to Give', payments.toGive.items);
+
+  if (payments.completedThisMonth.length > 0) {
+    html += `<h3 style="margin: 20px 0 12px; font-size: 16px; color: #1e293b;">Completed This Month</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <thead><tr style="background: #667eea;">
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Name</th>
+          <th style="padding: 12px 14px; text-align: right; color: #fff; font-size: 12px;">Amount</th>
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Type</th>
+          <th style="padding: 12px 14px; text-align: left; color: #fff; font-size: 12px;">Completed</th>
+        </tr></thead><tbody>`;
+    payments.completedThisMonth.forEach(item => {
+      html += row([
+        item.personName.replace(/</g, '&lt;'),
+        formatCurrency(item.amount),
+        item.type === 'get' ? 'Get' : 'Give',
+        item.completedAt ? formatDate(item.completedAt) : paymentStatusLabel(item.status),
+      ]);
+    });
+    html += '</tbody></table>';
+  }
+
+  html += `
+                </td></tr>
+              </table>
+            </td>
+          </tr>`;
+
+  return html;
+};
+
