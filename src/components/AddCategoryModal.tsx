@@ -141,7 +141,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
               <Text style={styles.hint}>One item per line · * or - for bullets</Text>
               <TextInput
                 style={styles.notesInput}
-                placeholder={'* Tata Motors\n* Gold ETF'}
+                placeholder={'* Item 1\n* Item 2'}
                 placeholderTextColor={theme.colors.textSecondary}
                 value={description}
                 onChangeText={onDescriptionChange}
