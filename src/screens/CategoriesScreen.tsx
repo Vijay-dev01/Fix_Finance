@@ -18,6 +18,7 @@ import {
 import { useBudget } from '../context/BudgetContext';
 import BudgetProgressCard from '../components/BudgetProgressCard';
 import CategoryDescriptionDialog from '../components/CategoryDescriptionDialog';
+import AddCategoryModal from '../components/AddCategoryModal';
 import { theme } from '../theme';
 import { formatCurrency, CATEGORY_ICON_OPTIONS } from '../constants/categories';
 import { hasCategoryDescription } from '../utils/categoryDescription';
@@ -89,6 +90,18 @@ const CategoriesScreen: React.FC = () => {
     setEditMode('budget');
   };
 
+  const resetAddForm = () => {
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+    setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
+    setKeyboardEmoji('');
+  };
+
+  const handleDismissAdd = () => {
+    setAddDialogVisible(false);
+    resetAddForm();
+  };
+
   const handleAddCategory = () => {
     const name = newCategoryName.trim();
     if (!name) {
@@ -102,10 +115,7 @@ const CategoriesScreen: React.FC = () => {
     }
     addCategory(name, icon, newCategoryDescription);
     setAddDialogVisible(false);
-    setNewCategoryName('');
-    setNewCategoryDescription('');
-    setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
-    setKeyboardEmoji('');
+    resetAddForm();
   };
 
   const handleDeleteCategory = (categoryId: string) => {
@@ -260,99 +270,19 @@ const CategoriesScreen: React.FC = () => {
         />
       )}
 
-      {/* Add Category Dialog */}
-      <Portal>
-        <Dialog
-          visible={addDialogVisible}
-          onDismiss={() => {
-            setAddDialogVisible(false);
-            setNewCategoryName('');
-            setNewCategoryDescription('');
-            setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
-            setKeyboardEmoji('');
-          }}
-          style={styles.dialog}
-        >
-          <Dialog.Title>New category</Dialog.Title>
-          <Dialog.Content>
-            <Text style={styles.dialogLabel}>Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Groceries, Rent"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              autoFocus
-            />
-            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>Icon</Text>
-            <View style={styles.iconGrid}>
-              {CATEGORY_ICON_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[
-                    styles.iconOption,
-                    selectedIcon === opt.emoji &&
-                      !keyboardEmoji.trim() &&
-                      styles.iconOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedIcon(opt.emoji);
-                    setKeyboardEmoji('');
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.iconEmoji}>{opt.emoji}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>
-              Or emoji from keyboard
-            </Text>
-            <TextInput
-              style={styles.emojiKeyboardInput}
-              placeholder="Tap here, then pick emoji on keyboard"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={keyboardEmoji}
-              onChangeText={setKeyboardEmoji}
-              maxLength={32}
-              autoCorrect={false}
-              autoCapitalize="none"
-            />
-            {(keyboardEmoji.trim() || selectedIcon) && (
-              <Text style={styles.emojiPreview}>
-                Preview:{' '}
-                <Text style={styles.emojiPreviewLarge}>
-                  {keyboardEmoji.trim() || selectedIcon}
-                </Text>
-              </Text>
-            )}
-
-            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>
-              Notes (optional)
-            </Text>
-            <Text style={styles.fieldHint}>
-              One item per line. Use * or - for bullets, e.g. * Tata Motors
-            </Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder={'* Tata Motors\n* Gold ETF'}
-              placeholderTextColor={theme.colors.textSecondary}
-              value={newCategoryDescription}
-              onChangeText={setNewCategoryDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setAddDialogVisible(false)}>Cancel</Button>
-            <Button onPress={handleAddCategory} mode="contained">
-              Add
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <AddCategoryModal
+        visible={addDialogVisible}
+        onDismiss={handleDismissAdd}
+        onAdd={handleAddCategory}
+        name={newCategoryName}
+        onNameChange={setNewCategoryName}
+        description={newCategoryDescription}
+        onDescriptionChange={setNewCategoryDescription}
+        selectedIcon={selectedIcon}
+        onSelectIcon={setSelectedIcon}
+        keyboardEmoji={keyboardEmoji}
+        onKeyboardEmojiChange={setKeyboardEmoji}
+      />
 
       <Portal>
         <Dialog
@@ -424,7 +354,7 @@ const CategoriesScreen: React.FC = () => {
             </Text>
             <TextInput
               style={styles.notesInput}
-              placeholder={'* Tata Motors\n* Cupid Stocks'}
+              placeholder={'* Item 1\n* Item 2'}
               placeholderTextColor={theme.colors.textSecondary}
               value={editDescription}
               onChangeText={setEditDescription}
