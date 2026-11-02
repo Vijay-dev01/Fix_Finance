@@ -17,30 +17,46 @@ import {
 } from 'react-native-paper';
 import { useBudget } from '../context/BudgetContext';
 import BudgetProgressCard from '../components/BudgetProgressCard';
+import CategoryDescriptionDialog from '../components/CategoryDescriptionDialog';
 import { theme } from '../theme';
 import { formatCurrency, CATEGORY_ICON_OPTIONS } from '../constants/categories';
+import { hasCategoryDescription } from '../utils/categoryDescription';
 
 const CategoriesScreen: React.FC = () => {
-  const { state, setBudget, setSpent, addCategory, deleteCategory } = useBudget();
+  const { state, setBudget, setSpent, addCategory, updateCategory, deleteCategory } =
+    useBudget();
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'budget' | 'spent'>('budget');
   const [amount, setAmount] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [addDialogVisible, setAddDialogVisible] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(CATEGORY_ICON_OPTIONS[0].emoji);
   /** When set, overrides grid selection (any emoji from Gboard / system keyboard) */
   const [keyboardEmoji, setKeyboardEmoji] = useState('');
+  const [descriptionViewCategoryId, setDescriptionViewCategoryId] = useState<string | null>(
+    null
+  );
+
+  const openEditDialog = (
+    categoryId: string,
+    mode: 'budget' | 'spent',
+    currentAmount: number
+  ) => {
+    const cat = state.categories.find(c => c.id === categoryId);
+    setEditingCategory(categoryId);
+    setEditMode(mode);
+    setAmount(currentAmount.toString());
+    setEditDescription(cat?.description ?? '');
+  };
 
   const handleEditBudget = (categoryId: string, currentBudget: number) => {
-    setEditingCategory(categoryId);
-    setEditMode('budget');
-    setAmount(currentBudget.toString());
+    openEditDialog(categoryId, 'budget', currentBudget);
   };
 
   const handleEditSpent = (categoryId: string, currentSpent: number) => {
-    setEditingCategory(categoryId);
-    setEditMode('spent');
-    setAmount(currentSpent.toString());
+    openEditDialog(categoryId, 'spent', currentSpent);
   };
 
   const handleSave = () => {
@@ -56,9 +72,12 @@ const CategoriesScreen: React.FC = () => {
       } else {
         setSpent(editingCategory, amountValue);
       }
+
+      updateCategory(editingCategory, { description: editDescription });
       
       setEditingCategory(null);
       setAmount('');
+      setEditDescription('');
       setEditMode('budget');
     }
   };
@@ -66,6 +85,7 @@ const CategoriesScreen: React.FC = () => {
   const handleCancelEdit = () => {
     setEditingCategory(null);
     setAmount('');
+    setEditDescription('');
     setEditMode('budget');
   };
 
@@ -80,9 +100,10 @@ const CategoriesScreen: React.FC = () => {
       Alert.alert('Missing icon', 'Pick an icon from the grid or type an emoji from your keyboard.');
       return;
     }
-    addCategory(name, icon);
+    addCategory(name, icon, newCategoryDescription);
     setAddDialogVisible(false);
     setNewCategoryName('');
+    setNewCategoryDescription('');
     setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
     setKeyboardEmoji('');
   };
@@ -116,6 +137,10 @@ const CategoriesScreen: React.FC = () => {
   });
 
   const isEmpty = state.categories.length === 0;
+
+  const descriptionViewCategory = descriptionViewCategoryId
+    ? state.categories.find(c => c.id === descriptionViewCategoryId)
+    : null;
 
   return (
     <View style={styles.container}>
@@ -187,6 +212,11 @@ const CategoriesScreen: React.FC = () => {
                 onPress={() =>
                   handleEditBudget(category.id, category.budget)
                 }
+                onInfoPress={
+                  hasCategoryDescription(category.description)
+                    ? () => setDescriptionViewCategoryId(category.id)
+                    : undefined
+                }
               />
               <View style={styles.buttonRow}>
                 <Button
@@ -237,6 +267,7 @@ const CategoriesScreen: React.FC = () => {
           onDismiss={() => {
             setAddDialogVisible(false);
             setNewCategoryName('');
+            setNewCategoryDescription('');
             setSelectedIcon(CATEGORY_ICON_OPTIONS[0].emoji);
             setKeyboardEmoji('');
           }}
@@ -296,6 +327,23 @@ const CategoriesScreen: React.FC = () => {
                 </Text>
               </Text>
             )}
+
+            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>
+              Notes (optional)
+            </Text>
+            <Text style={styles.fieldHint}>
+              One item per line. Use * or - for bullets, e.g. * Tata Motors
+            </Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder={'* Tata Motors\n* Gold ETF'}
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newCategoryDescription}
+              onChangeText={setNewCategoryDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setAddDialogVisible(false)}>Cancel</Button>
@@ -334,6 +382,7 @@ const CategoriesScreen: React.FC = () => {
                       ? category.budget.toString()
                       : category.spent.toString()
                   );
+                  setEditDescription(category.description ?? '');
                 }
               }}
               buttons={[
@@ -366,6 +415,23 @@ const CategoriesScreen: React.FC = () => {
                 Note: This will override the calculated spent amount from transactions.
               </Text>
             )}
+
+            <Text style={[styles.dialogLabel, { marginTop: 16 }]}>
+              Notes (optional)
+            </Text>
+            <Text style={styles.fieldHint}>
+              One item per line. Use * or - for bullets.
+            </Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder={'* Tata Motors\n* Cupid Stocks'}
+              placeholderTextColor={theme.colors.textSecondary}
+              value={editDescription}
+              onChangeText={setEditDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={handleCancelEdit}>Cancel</Button>
@@ -375,6 +441,15 @@ const CategoriesScreen: React.FC = () => {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {descriptionViewCategory?.description && (
+        <CategoryDescriptionDialog
+          visible={descriptionViewCategoryId !== null}
+          categoryName={descriptionViewCategory.name}
+          description={descriptionViewCategory.description}
+          onDismiss={() => setDescriptionViewCategoryId(null)}
+        />
+      )}
     </View>
   );
 };
@@ -561,6 +636,22 @@ const styles = StyleSheet.create({
     color: theme.colors.warning,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  notesInput: {
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 96,
+    color: theme.colors.onSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceVariant,
   },
 });
 

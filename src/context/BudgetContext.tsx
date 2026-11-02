@@ -22,7 +22,8 @@ interface BudgetContextType {
   /** When in new month and email was sent last month, show "Did you receive the email?" Only after confirm, data is deleted. */
   pendingConfirmationMonth: string | null;
   confirmReportReceivedAndReset: () => Promise<void>;
-  addCategory: (name: string, icon: string) => void;
+  addCategory: (name: string, icon: string, description?: string) => void;
+  updateCategory: (categoryId: string, updates: { name?: string; icon?: string; description?: string }) => void;
   deleteCategory: (categoryId: string) => void;
 }
 
@@ -309,13 +310,31 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   };
 
-  const addCategory = (name: string, icon: string) => {
+  const addCategory = (name: string, icon: string, description?: string) => {
     const baseId = slugifyCategoryName(name) || 'category';
     const id = `${baseId}-${Date.now()}`;
+    const trimmedDescription = description?.trim();
     dispatch({
       type: 'ADD_CATEGORY',
-      category: { id, name: name.trim(), icon },
+      category: {
+        id,
+        name: name.trim(),
+        icon,
+        ...(trimmedDescription ? { description: trimmedDescription } : {}),
+      },
     });
+  };
+
+  const updateCategory = (
+    categoryId: string,
+    updates: { name?: string; icon?: string; description?: string }
+  ) => {
+    const normalized = { ...updates };
+    if (updates.description !== undefined) {
+      const trimmed = updates.description.trim();
+      normalized.description = trimmed || undefined;
+    }
+    dispatch({ type: 'UPDATE_CATEGORY', categoryId, updates: normalized });
   };
 
   const deleteCategory = (categoryId: string) => {
@@ -344,6 +363,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         pendingConfirmationMonth,
         confirmReportReceivedAndReset,
         addCategory,
+        updateCategory,
         deleteCategory,
       }}
     >

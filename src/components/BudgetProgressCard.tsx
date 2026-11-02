@@ -1,19 +1,23 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, ProgressBar } from 'react-native-paper';
+import { Card, Text, ProgressBar, IconButton } from 'react-native-paper';
 import { Category } from '../types';
 import { formatCurrency } from '../constants/categories';
 import { theme } from '../theme';
+import { hasCategoryDescription } from '../utils/categoryDescription';
 
 interface BudgetProgressCardProps {
   category: Category;
   onPress?: () => void;
+  onInfoPress?: () => void;
 }
 
 const BudgetProgressCard: React.FC<BudgetProgressCardProps> = ({
   category,
   onPress,
+  onInfoPress,
 }) => {
+  const showInfo = hasCategoryDescription(category.description) && onInfoPress;
   const percentage = category.budget > 0 
     ? Math.min((category.spent / category.budget) * 100, 100) 
     : 0;
@@ -35,6 +39,15 @@ const BudgetProgressCard: React.FC<BudgetProgressCardProps> = ({
               {category.transactions.length} transactions
             </Text>
           </View>
+          {showInfo && (
+            <IconButton
+              icon="information-outline"
+              size={22}
+              iconColor={theme.colors.textSecondary}
+              onPress={() => onInfoPress?.()}
+              style={styles.infoBtn}
+            />
+          )}
         </View>
 
         <View style={styles.budgetInfo}>
@@ -90,6 +103,9 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  infoBtn: {
+    margin: 0,
   },
   categoryName: {
     fontSize: 18,

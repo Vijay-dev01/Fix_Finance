@@ -26,6 +26,7 @@ export const saveBudgetData = async (data: BudgetState): Promise<void> => {
         id: cat.id,
         name: cat.name,
         icon: cat.icon,
+        description: cat.description,
         budget: cat.budget,
         spent: cat.spent,
         transactions: (cat.transactions || []).map(t => ({

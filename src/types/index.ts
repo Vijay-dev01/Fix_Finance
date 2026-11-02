@@ -13,6 +13,8 @@ export interface Category {
   id: string;
   name: string;
   icon: string;
+  /** Optional multi-line notes (bullet lines, e.g. "* Tata Motors") */
+  description?: string;
   budget: number;
   spent: number;
   transactions: Transaction[];
